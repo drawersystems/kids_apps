@@ -1,35 +1,66 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="theme-color" content="#2a123d"><title>Jump on the Ghost — Boo's Pumpkin Patch</title>
-<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#261039;font-family:system-ui,-apple-system,sans-serif;touch-action:none}canvas{display:block;width:100%;height:100%;touch-action:none}#hud{position:fixed;top:max(12px,env(safe-area-inset-top));left:12px;right:12px;display:flex;justify-content:space-between;align-items:center;color:white;font-weight:800;text-shadow:0 2px 3px #261039;pointer-events:none}#hud span{background:#421b65bb;padding:9px 12px;border-radius:14px}button{font:800 20px system-ui;border:0;border-radius:20px;padding:13px 28px;color:white;background:#ed7a24}#pause{pointer-events:auto;font-size:20px;padding:8px 14px;background:#723d9a}#overlay{position:fixed;inset:0;background:#160b2ab9;display:flex;align-items:center;justify-content:center;color:white;text-align:center;padding:25px}#panel{background:#4c216d;border:3px solid #ffad4d;border-radius:28px;padding:25px;max-width:380px;width:100%;box-shadow:0 10px 40px #0008}h1{color:#ffc35e;font-size:34px;line-height:1.05;margin:0 0 15px}p{line-height:1.5}.hidden{display:none!important}</style></head>
-<body><canvas id="game"></canvas><div id="hud"><span id="score">⭐ 0</span><span id="candy">🍬 0</span><button id="pause">Ⅱ</button></div><div id="overlay"><div id="panel"><h1>🎃 Jump on the Ghost!</h1><p>Meet Boo, the pink ghost!<br>Drag your finger left and right to bounce on platforms. Collect candy and dodge the bats!</p><p id="result"></p><button id="start">Play!</button></div></div>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="theme-color" content="#26113e"><title>Jump on the Ghost — Boo's Pumpkin Patch V2</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#1d0e30;color:white;font-family:system-ui,-apple-system,sans-serif;touch-action:none;-webkit-user-select:none;user-select:none}canvas{width:100%;height:100%;display:block;touch-action:none}
+#hud{position:fixed;top:max(10px,env(safe-area-inset-top));left:12px;right:12px;display:flex;align-items:center;justify-content:space-between;gap:6px;pointer-events:none;font-weight:900;font-size:15px;text-shadow:0 2px 3px #210b32}#hud span,#pause{background:#3c1b64d9;padding:9px 11px;border-radius:13px}button{border:0;color:white;font-weight:900;touch-action:none;-webkit-tap-highlight-color:transparent}#pause{pointer-events:auto;font-size:19px}
+#controls{position:fixed;left:0;right:0;bottom:max(12px,env(safe-area-inset-bottom));display:flex;justify-content:space-between;align-items:end;padding:0 14px;pointer-events:none;gap:10px}
+.cluster{display:flex;align-items:end;gap:8px;pointer-events:auto}.ctl{width:clamp(57px,17vw,82px);height:clamp(57px,17vw,82px);border-radius:22px;background:#7543aee8;border:3px solid #bc8bea;font-size:28px;box-shadow:0 5px 0 #3a1b62;cursor:pointer}.ctl:active,.ctl.pressed{background:#c15dd0;transform:translateY(3px);box-shadow:0 2px 0 #3a1b62}#jump{background:#ef822f;border-color:#ffcb7a;font-size:17px;width:clamp(76px,21vw,100px)}#up{font-size:15px}
+#overlay{position:fixed;inset:0;display:grid;place-items:center;background:#170b2cce;padding:18px}#overlay.hidden{display:none}#panel{max-width:420px;width:100%;background:#50246f;border:3px solid #ffbd65;border-radius:28px;text-align:center;padding:24px;box-shadow:0 12px 45px #0009}h1{font-size:32px;color:#ffca6d;margin:0 0 12px}p{line-height:1.5}#play{background:#f08a31;border-radius:18px;padding:14px 34px;font-size:22px}#controls.hidden{display:none}
+</style></head><body>
+<canvas id="game" aria-label="Halloween platform game"></canvas>
+<div id="hud"><span id="points">⭐ 0</span><span id="treats">🍬 0/6</span><span id="lives">❤️❤️❤️</span><button id="pause" aria-label="Pause game">Ⅱ</button></div>
+<div id="controls" class="hidden"><div class="cluster"><button class="ctl" data-key="left" aria-label="Move left">◀</button><button class="ctl" data-key="right" aria-label="Move right">▶</button></div><div class="cluster"><button class="ctl" id="up" data-key="up" aria-label="Climb ladder">▲<div style="font-size:11px">CLIMB</div></button><button class="ctl" id="jump" data-key="jump" aria-label="Jump">JUMP</button></div></div>
+<div id="overlay"><div id="panel"><h1 id="heading">🎃 Jump on the Ghost!</h1><p id="message">Boo's Pumpkin Patch — Level 1<br><br>Run left and right, press CLIMB near a ladder, and JUMP over pumpkins and skeletons. Collect candy and reach the glowing door at the top!</p><button id="play">Play!</button></div></div>
 <script>
 (()=>{'use strict';
-const c=document.querySelector('#game'),ctx=c.getContext('2d'),overlay=document.querySelector('#overlay'),start=document.querySelector('#start'),pause=document.querySelector('#pause'),scoreEl=document.querySelector('#score'),candyEl=document.querySelector('#candy'),result=document.querySelector('#result');
-let W=400,H=700,dpr=1,boo,platforms=[],treats=[],bats=[],camera=0,highest=0,candies=0,score=0,running=false,paused=false,last=0,seed=0,target=null;
-const rand=(a,b)=>a+Math.random()*(b-a);
-function resize(){W=innerWidth;H=innerHeight;dpr=Math.min(devicePixelRatio||1,2);c.width=Math.round(W*dpr);c.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)}
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),overlay=document.getElementById('overlay'),controls=document.getElementById('controls'),points=document.getElementById('points'),treats=document.getElementById('treats'),lives=document.getElementById('lives'),pauseBtn=document.getElementById('pause');
+const WW=400,HH=720, floors=[650,510,370,230],ladders=[{x:345,from:0},{x:55,from:1},{x:345,from:2}], keys={left:false,right:false,up:false,jump:false};
+let player,monsters,candies,pumpkins,score,hearts,mode='menu',jumpLatch=false,climbLatch=false,last=0,acc=0,clock=0,invincible=0;
+function resize(){let d=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(innerWidth*d);canvas.height=Math.round(innerHeight*d);ctx.setTransform(1,0,0,1,0,0)}
 addEventListener('resize',resize);resize();
-function reset(){camera=0;highest=0;candies=0;score=0;seed=0;target=null;platforms=[];treats=[];bats=[];boo={x:W/2,y:H-145,vx:0,vy:-650,r:20};platforms.push({x:W/2-65,y:H-75,w:130});while(seed<H*2){addPlatform()}running=true;paused=false;overlay.classList.add('hidden');last=performance.now()}
-function addPlatform(){let y=H-155-seed;let w=rand(75,115);let x=rand(10,Math.max(11,W-w-10));platforms.push({x,y,w});if(seed>80&&Math.random()<.65)treats.push({x:x+w/2,y:y-42,taken:false});if(seed>400&&Math.random()<.24)bats.push({x:rand(35,W-35),y:y-75,phase:rand(0,6.28)});seed+=rand(75,115)}
-function end(){running=false;overlay.classList.remove('hidden');document.querySelector('h1').textContent='👻 Boo! Game Over';result.textContent='Score: '+score+' • Candy: '+candies;start.textContent='Play Again'}
-function move(x){target=x}c.addEventListener('pointerdown',e=>{move(e.clientX);c.setPointerCapture(e.pointerId)});c.addEventListener('pointermove',e=>{if(e.buttons||e.pointerType==='touch')move(e.clientX)});c.addEventListener('pointerup',()=>target=null);c.addEventListener('pointercancel',()=>target=null);
-start.onclick=reset;pause.onclick=()=>{if(!running)return;paused=!paused;pause.textContent=paused?'▶':'Ⅱ'};
-function drawGhost(x,y){ctx.save();ctx.translate(x,y);ctx.shadowColor='#ff9bd7';ctx.shadowBlur=20;ctx.fillStyle='#ffa9df';ctx.strokeStyle='#fff1fb';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-20,18);ctx.lineTo(-20,-3);ctx.arc(0,-3,20,Math.PI,0);ctx.lineTo(20,18);ctx.quadraticCurveTo(14,26,8,18);ctx.quadraticCurveTo(0,26,-7,18);ctx.quadraticCurveTo(-15,26,-20,18);ctx.closePath();ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.fillStyle='#30133e';ctx.beginPath();ctx.arc(-7,-4,3.5,0,7);ctx.arc(7,-4,3.5,0,7);ctx.fill();ctx.strokeStyle='#30133e';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,4,5,0,Math.PI);ctx.stroke();ctx.restore()}
-function draw(t){ctx.clearRect(0,0,W,H);let g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#1e103f');g.addColorStop(1,'#9a3b83');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-ctx.fillStyle='#ffe9a0';ctx.beginPath();ctx.arc(W*.77,H*.18,43,0,7);ctx.fill();ctx.fillStyle='#ffffff77';for(let i=0;i<42;i++){let x=((i*137)%W),y=((i*97)%H);ctx.fillRect(x,y,2,2)}
-ctx.fillStyle='#2c1543';for(let i=0;i<11;i++){let x=i*W/10;ctx.beginPath();ctx.moveTo(x,H);ctx.lineTo(x-13,H-55-(i%3)*15);ctx.lineTo(x+13,H-55-(i%3)*15);ctx.fill()}
-for(const p of platforms){let y=p.y+camera;if(y< -40||y>H+50)continue;ctx.fillStyle='#442453';ctx.fillRect(p.x,y,p.w,18);ctx.fillStyle='#8fd849';ctx.beginPath();ctx.roundRect(p.x,y-7,p.w,13,6);ctx.fill();ctx.font='24px serif';if(p.w>90)ctx.fillText('🎃',p.x+10,y-8)}
-ctx.font='26px serif';for(const a of treats)if(!a.taken){let y=a.y+camera;if(y>-30&&y<H+30)ctx.fillText('🍬',a.x-13,y+8)}
-for(const b of bats){let y=b.y+camera;if(y>-40&&y<H+40){ctx.font='30px serif';ctx.fillText('🦇',b.x+Math.sin(t/500+b.phase)*25-16,y+12)}}
-if(boo)drawGhost(boo.x,boo.y+camera)}
-function frame(t){let dt=Math.min((t-last)/1000||0,.035);last=t;if(running&&!paused){let prev=boo.y;let direction=target===null?0:Math.max(-1,Math.min(1,(target-boo.x)/45));boo.vx=direction*340;boo.x+=boo.vx*dt;boo.x=Math.max(20,Math.min(W-20,boo.x));boo.vy+=1450*dt;boo.y+=boo.vy*dt;
-if(boo.vy>0)for(const p of platforms){if(prev+20<=p.y+10&&boo.y+20>=p.y&&boo.x+16>p.x&&boo.x-16<p.x+p.w){boo.y=p.y-20;boo.vy=-650;break}}
-if(boo.y+camera<H*.38)camera=H*.38-boo.y;highest=Math.max(highest,H-145-boo.y);score=Math.max(0,Math.floor(highest/10))+candies*50;
-for(const a of treats)if(!a.taken&&Math.hypot(boo.x-a.x,boo.y-a.y)<36){a.taken=true;candies++}
-for(const b of bats)if(Math.hypot(boo.x-(b.x+Math.sin(t/500+b.phase)*25),boo.y-b.y)<29){end();break}
-while(H-155-seed+camera>-100)addPlatform();
-platforms=platforms.filter(p=>p.y+camera<H+60);treats=treats.filter(a=>a.y+camera<H+60&&!a.taken);bats=bats.filter(b=>b.y+camera<H+60);
-if(boo.y+camera>H+40)end();scoreEl.textContent='⭐ '+score;candyEl.textContent='🍬 '+candies}
-draw(t);requestAnimationFrame(frame)}requestAnimationFrame(frame);
+function init(){player={x:60,y:floors[0],vy:0,ground:0,climb:-1,face:1};monsters=[{x:205,f:1,dir:1,speed:38},{x:195,f:2,dir:-1,speed:52},{x:175,f:3,dir:1,speed:43}];pumpkins=[{x:205,f:0},{x:275,f:1},{x:155,f:2},{x:240,f:3}];candies=[{x:130,f:0},{x:315,f:0},{x:205,f:1},{x:95,f:2},{x:270,f:2},{x:85,f:3}].map(c=>({...c,taken:false}));score=0;hearts=3;clock=0;invincible=0;jumpLatch=false;climbLatch=false;for(const k in keys)keys[k]=false;mode='play';overlay.classList.add('hidden');controls.classList.remove('hidden');pauseBtn.textContent='Ⅱ';updateHud()}
+function updateHud(){points.textContent='⭐ '+score;treats.textContent='🍬 '+candies.filter(c=>c.taken).length+'/6';lives.textContent='❤️'.repeat(hearts)}
+function show(title,message,button){document.getElementById('heading').textContent=title;document.getElementById('message').innerHTML=message;document.getElementById('play').textContent=button;overlay.classList.remove('hidden');controls.classList.add('hidden')}
+function lose(){hearts--;updateHud();invincible=2;if(hearts<=0){mode='over';show('👻 Try Again!','Boo collected '+candies.filter(c=>c.taken).length+' candies!<br>Score: '+score,'Play Again');return}player={x:60,y:floors[0],vy:0,ground:0,climb:-1,face:1}}
+function win(){mode='won';score+=500;updateHud();show('🎉 Boo Wins!','You reached the haunted doorway!<br>Candy: '+candies.filter(c=>c.taken).length+'/6<br>Score: '+score,'Play Again')}
+document.getElementById('play').onclick=init;
+pauseBtn.onclick=()=>{if(mode==='play'){mode='paused';pauseBtn.textContent='▶';show('⏸ Paused','Boo is taking a little break.','Resume')}else if(mode==='paused')resume()};
+function resume(){mode='play';overlay.classList.add('hidden');controls.classList.remove('hidden');pauseBtn.textContent='Ⅱ';last=performance.now()}
+document.getElementById('play').addEventListener('click',()=>{if(mode==='paused')resume()});
+for(const b of document.querySelectorAll('[data-key]')){const key=b.dataset.key;const down=e=>{e.preventDefault();keys[key]=true;b.classList.add('pressed');try{b.setPointerCapture(e.pointerId)}catch(_){}};const up=e=>{e.preventDefault();keys[key]=false;b.classList.remove('pressed')};b.addEventListener('pointerdown',down);b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);b.addEventListener('lostpointercapture',up)}
+addEventListener('keydown',e=>{let k={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',Space:'jump',' ':'jump',KeyA:'left',KeyD:'right',KeyW:'up'}[e.code]||({ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up'}[e.key]);if(k){keys[k]=true;e.preventDefault()}});
+addEventListener('keyup',e=>{let k={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',Space:'jump',' ':'jump',KeyA:'left',KeyD:'right',KeyW:'up'}[e.code]||({ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up'}[e.key]);if(k)keys[k]=false});
+function update(dt){clock+=dt;if(invincible>0)invincible-=dt;
+let dx=(keys.right?1:0)-(keys.left?1:0);if(dx)player.face=dx;
+if(player.climb>=0){let l=ladders[player.climb];player.x=l.x;player.y-=150*dt;player.vy=0;if(player.y<=floors[l.from+1]){player.y=floors[l.from+1];player.ground=l.from+1;player.climb=-1;score+=100;updateHud()} }
+else{
+player.x=Math.max(20,Math.min(380,player.x+dx*185*dt));
+if(keys.up&&!climbLatch&&player.ground>=0&&player.ground<3&&Math.abs(player.x-ladders[player.ground].x)<32&&Math.abs(player.y-floors[player.ground])<6){player.climb=player.ground;player.ground=-1;player.vy=0}
+if(keys.jump&&!jumpLatch&&player.ground>=0){player.vy=-390;player.ground=-1}
+if(player.ground<0&&player.climb<0){let oldY=player.y;player.vy+=950*dt;player.y+=player.vy*dt;if(player.vy>=0){for(let f=3;f>=0;f--){if(oldY<=floors[f]+3&&player.y>=floors[f]){player.y=floors[f];player.vy=0;player.ground=f;break}}}if(player.y>HH+30)lose()}
+}
+jumpLatch=keys.jump;climbLatch=keys.up;
+if(mode!=='play')return;
+for(const c of candies){if(!c.taken&&Math.abs(player.x-c.x)<23&&Math.abs(player.y-(floors[c.f]-28))<35){c.taken=true;score+=50;updateHud()}}
+for(const m of monsters){m.x+=m.dir*m.speed*dt;if(m.x>345){m.x=345;m.dir=-1}if(m.x<55){m.x=55;m.dir=1}}
+if(invincible<=0&&player.climb<0){for(const p of pumpkins){if(Math.abs(player.x-p.x)<23&&Math.abs(player.y-floors[p.f])<26){lose();break}}if(invincible<=0)for(const m of monsters){if(Math.abs(player.x-m.x)<24&&Math.abs(player.y-floors[m.f])<28){lose();break}}}
+if(player.ground===3&&player.x<62)win();
+}
+function textEmoji(emoji,x,y,size=28){ctx.font=size+'px system-ui,Apple Color Emoji,Segoe UI Emoji';ctx.textAlign='center';ctx.fillText(emoji,x,y)}
+function ghost(x,y){ctx.save();ctx.translate(x,y);if(invincible>0&&Math.floor(clock*9)%2===0)ctx.globalAlpha=.45;ctx.shadowColor='#ff93d8';ctx.shadowBlur=14;ctx.fillStyle='#ff9cdb';ctx.strokeStyle='#fff2fa';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(-18,-4);ctx.arc(0,-17,18,Math.PI,0);ctx.lineTo(18,-4);ctx.lineTo(18,0);ctx.quadraticCurveTo(13,7,8,0);ctx.quadraticCurveTo(0,8,-7,0);ctx.quadraticCurveTo(-13,7,-18,0);ctx.closePath();ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.fillStyle='#34113e';ctx.beginPath();ctx.arc(-6,-18,3,0,7);ctx.arc(6,-18,3,0,7);ctx.fill();ctx.beginPath();ctx.arc(0,-10,4,0,Math.PI);ctx.strokeStyle='#34113e';ctx.lineWidth=2;ctx.stroke();ctx.restore()}
+function draw(){const sx=canvas.width/WW,sy=canvas.height/HH,scale=Math.min(sx,sy),ox=(canvas.width-WW*scale)/2,oy=(canvas.height-HH*scale)/2;ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#1d0e30';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.setTransform(scale,0,0,scale,ox,oy);
+let bg=ctx.createLinearGradient(0,0,0,HH);bg.addColorStop(0,'#1e103e');bg.addColorStop(1,'#803365');ctx.fillStyle=bg;ctx.fillRect(0,0,WW,HH);
+ctx.fillStyle='#ffe3a0';ctx.beginPath();ctx.arc(325,103,42,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff5b3';for(let i=0;i<45;i++)ctx.fillRect((i*137)%400,(i*89)%660,2,2);
+ctx.fillStyle='#2d1744';for(let i=0;i<9;i++){let x=i*50;ctx.beginPath();ctx.moveTo(x-15,720);ctx.lineTo(x+10,570-(i%3)*30);ctx.lineTo(x+30,720);ctx.fill()}
+textEmoji('🏚️',80,170,60);textEmoji('🌙',330,110,38);
+for(let i=0;i<4;i++){let y=floors[i];ctx.fillStyle='#5b3059';ctx.fillRect(8,y,384,19);ctx.fillStyle='#91c94b';ctx.fillRect(8,y-6,384,9);for(let x=20;x<390;x+=44){ctx.fillStyle='#ab6a46';ctx.fillRect(x,y+4,4,10)}}
+for(const l of ladders){let bottom=floors[l.from],top=floors[l.from+1];ctx.strokeStyle='#e4b979';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(l.x-13,top);ctx.lineTo(l.x-13,bottom);ctx.moveTo(l.x+13,top);ctx.lineTo(l.x+13,bottom);ctx.stroke();ctx.lineWidth=3;for(let y=top+14;y<bottom;y+=17){ctx.beginPath();ctx.moveTo(l.x-12,y);ctx.lineTo(l.x+12,y);ctx.stroke()}}
+for(const p of pumpkins)textEmoji('🎃',p.x,floors[p.f]-7,30);
+for(const c of candies)if(!c.taken)textEmoji('🍬',c.x,floors[c.f]-24,27);
+for(const m of monsters)textEmoji('💀',m.x,floors[m.f]-8,30);
+ctx.shadowColor='#f9e889';ctx.shadowBlur=22;textEmoji('🚪',44,210,39);ctx.shadowBlur=0;textEmoji('🏁',43,173,23);
+if(player)ghost(player.x,player.y);if(mode==='menu'){ctx.fillStyle='#f2bc69';ctx.font='bold 17px system-ui';ctx.textAlign='center';ctx.fillText('Boo’s Pumpkin Patch',200,55)}
+}
+function frame(now){let dt=Math.min((now-last)/1000||0,.05);last=now;if(mode==='play'){acc+=dt;let steps=0;while(acc>=1/120&&steps++<8){update(1/120);acc-=1/120;if(mode!=='play')break}}else acc=0;draw();requestAnimationFrame(frame)}requestAnimationFrame(frame);
 })();
 </script></body></html>
