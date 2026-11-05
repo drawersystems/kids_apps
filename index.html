@@ -23,10 +23,10 @@ function updateHud(){points.textContent='⭐ '+score;treats.textContent='🍬 '+
 function show(title,message,button){document.getElementById('heading').textContent=title;document.getElementById('message').innerHTML=message;document.getElementById('play').textContent=button;overlay.classList.remove('hidden');controls.classList.add('hidden')}
 function lose(){hearts--;updateHud();invincible=2;if(hearts<=0){mode='over';show('👻 Try Again!','Boo collected '+candies.filter(c=>c.taken).length+' candies!<br>Score: '+score,'Play Again');return}player={x:60,y:floors[0],vy:0,ground:0,climb:-1,face:1}}
 function win(){mode='won';score+=500;updateHud();show('🎉 Boo Wins!','You reached the haunted doorway!<br>Candy: '+candies.filter(c=>c.taken).length+'/6<br>Score: '+score,'Play Again')}
-document.getElementById('play').onclick=init;
+document.getElementById('play').onclick=()=>{if(mode==='paused')resume();else init()};
 pauseBtn.onclick=()=>{if(mode==='play'){mode='paused';pauseBtn.textContent='▶';show('⏸ Paused','Boo is taking a little break.','Resume')}else if(mode==='paused')resume()};
 function resume(){mode='play';overlay.classList.add('hidden');controls.classList.remove('hidden');pauseBtn.textContent='Ⅱ';last=performance.now()}
-document.getElementById('play').addEventListener('click',()=>{if(mode==='paused')resume()});
+
 for(const b of document.querySelectorAll('[data-key]')){const key=b.dataset.key;const down=e=>{e.preventDefault();keys[key]=true;b.classList.add('pressed');try{b.setPointerCapture(e.pointerId)}catch(_){}};const up=e=>{e.preventDefault();keys[key]=false;b.classList.remove('pressed')};b.addEventListener('pointerdown',down);b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);b.addEventListener('lostpointercapture',up)}
 addEventListener('keydown',e=>{let k={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',Space:'jump',' ':'jump',KeyA:'left',KeyD:'right',KeyW:'up'}[e.code]||({ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up'}[e.key]);if(k){keys[k]=true;e.preventDefault()}});
 addEventListener('keyup',e=>{let k={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',Space:'jump',' ':'jump',KeyA:'left',KeyD:'right',KeyW:'up'}[e.code]||({ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up'}[e.key]);if(k)keys[k]=false});
