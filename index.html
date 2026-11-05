@@ -61,6 +61,6 @@ for(const m of monsters)textEmoji('💀',m.x,floors[m.f]-8,30);
 ctx.shadowColor='#f9e889';ctx.shadowBlur=22;textEmoji('🚪',44,210,39);ctx.shadowBlur=0;textEmoji('🏁',43,173,23);
 if(player)ghost(player.x,player.y);if(mode==='menu'){ctx.fillStyle='#f2bc69';ctx.font='bold 17px system-ui';ctx.textAlign='center';ctx.fillText('Boo’s Pumpkin Patch',200,55)}
 }
-function frame(now){let dt=Math.min((now-last)/1000||0,.05);last=now;if(mode==='play'){acc+=dt;let steps=0;while(acc>=1/120&&steps++<8){update(1/120);acc-=1/120;if(mode!=='play')break}}else acc=0;draw();requestAnimationFrame(frame)}requestAnimationFrame(frame);
+function frame(now){try{let dt=Math.min((now-last)/1000||0,.05);last=now;if(mode==='play'){acc+=dt;let steps=0;while(acc>=1/120&&steps++<8){update(1/120);acc-=1/120;if(mode!=='play')break}}else acc=0;draw();}catch(err){document.getElementById('heading').textContent='Game loading error';document.getElementById('message').textContent=String(err);overlay.classList.remove('hidden');controls.classList.add('hidden');console.error(err)}requestAnimationFrame(frame)}requestAnimationFrame(frame);
 })();
 </script></body></html>
