@@ -21,7 +21,7 @@ ctx.fillStyle='#2c1543';for(let i=0;i<11;i++){let x=i*W/10;ctx.beginPath();ctx.m
 for(const p of platforms){let y=p.y+camera;if(y< -40||y>H+50)continue;ctx.fillStyle='#442453';ctx.fillRect(p.x,y,p.w,18);ctx.fillStyle='#8fd849';ctx.beginPath();ctx.roundRect(p.x,y-7,p.w,13,6);ctx.fill();ctx.font='24px serif';if(p.w>90)ctx.fillText('🎃',p.x+10,y-8)}
 ctx.font='26px serif';for(const a of treats)if(!a.taken){let y=a.y+camera;if(y>-30&&y<H+30)ctx.fillText('🍬',a.x-13,y+8)}
 for(const b of bats){let y=b.y+camera;if(y>-40&&y<H+40){ctx.font='30px serif';ctx.fillText('🦇',b.x+Math.sin(t/500+b.phase)*25-16,y+12)}}
-drawGhost(boo.x,boo.y+camera)}
+if(boo)drawGhost(boo.x,boo.y+camera)}
 function frame(t){let dt=Math.min((t-last)/1000||0,.035);last=t;if(running&&!paused){let prev=boo.y;let direction=target===null?0:Math.max(-1,Math.min(1,(target-boo.x)/45));boo.vx=direction*340;boo.x+=boo.vx*dt;boo.x=Math.max(20,Math.min(W-20,boo.x));boo.vy+=1450*dt;boo.y+=boo.vy*dt;
 if(boo.vy>0)for(const p of platforms){if(prev+20<=p.y+10&&boo.y+20>=p.y&&boo.x+16>p.x&&boo.x-16<p.x+p.w){boo.y=p.y-20;boo.vy=-650;break}}
 if(boo.y+camera<H*.38)camera=H*.38-boo.y;highest=Math.max(highest,H-145-boo.y);score=Math.max(0,Math.floor(highest/10))+candies*50;
